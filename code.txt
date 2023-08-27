@@ -1,0 +1,100 @@
+#include <LiquidCrystal.h>
+#include <Keypad.h>
+#include <Servo.h>
+
+// Initialize the library by associating LCD interface pins with Arduino pins
+LiquidCrystal lcd(12, 11, A5, A4, A3, A2);
+
+// Define the keypad layout
+const byte ROWS = 4;
+const byte COLS = 4;
+char keys[ROWS][COLS] = {
+  {'D', 'C', 'B', 'A'},
+  {'#', '9', '6', '3'},
+  {'0', '8', '5', '2'},
+  {'*', '7', '4', '1'} // Updated to include '0' and '#'
+};
+byte rowPins[ROWS] = {9, 8, 7, 6}; // Connect to the row pinouts of the keypad
+byte colPins[COLS] = {5, 4, 3, 2}; // Connect to the column pinouts of the keypad
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+
+// Servo control
+Servo doorServo;
+
+// Password
+const char *correctPassword = "1234"; // Change this to your desired password
+char enteredPassword[5]; // Buffer for entered password
+byte passwordIndex = 0;
+
+// Door lock status
+bool isLocked = true;
+
+void setup() {
+  // Set up the LCD's number of columns and rows
+  lcd.begin(16, 2);
+
+  // Attach servo to pin
+  doorServo.attach(13);
+
+  // Print the display name on the LCD
+  lcd.print("Enter password:");
+}
+
+void loop() {
+  char key = keypad.getKey();
+  
+  if (key != NO_KEY && key != 'D') {
+    lcd.setCursor(passwordIndex, 1);
+    lcd.print('*');
+    enteredPassword[passwordIndex] = key;
+    passwordIndex++;
+    
+    if (passwordIndex == 4) {
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      
+      if (strcmp(enteredPassword, correctPassword) == 0) {
+        if (isLocked) {
+          unlockDoor();
+        } else {
+          lockDoor();
+        }
+      } else {
+        lcd.print("Wrong password!");
+        delay(2000);
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Enter password:");
+      }
+      
+      clearPasswordBuffer();
+    }
+  }
+}
+
+void unlockDoor() {
+  doorServo.write(0); // Rotate servo to unlocked position
+  lcd.print("Door Unlocked");
+  isLocked = false;
+  delay(2000);
+  lcd.clear();
+  lcd.print("Enter password:");
+}
+
+void lockDoor() {
+  doorServo.write(90); // Rotate servo to locked position
+  lcd.print("Door Locked  ");
+  isLocked = true;
+  delay(2000);
+  lcd.clear();
+  lcd.print("Enter password:");
+}
+
+void clearPasswordBuffer() {
+  for (byte i = 0; i < 4; i++) {
+    enteredPassword[i] = 0;
+  }
+  passwordIndex = 0;
+  lcd.setCursor(0, 1);
+  lcd.print("    ");
+}
